@@ -1,0 +1,25 @@
+# Build artifacts
+target/
+.cpcache/
+
+# Generated output
+output/
+
+# Environment files
+*.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.nrepl-port
+
+# IDE
+.idea/
+.vscode/
+*.iml

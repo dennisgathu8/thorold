@@ -1,0 +1,5 @@
+{:thorold/data-dir    "data/"
+ :thorold/output-dir  "output/"
+ :api/port            8080
+ :api/rate-limit      {:enabled false :requests-per-minute 60}
+ :log/level           :info}
