@@ -23,3 +23,16 @@ Thumbs.db
 .idea/
 .vscode/
 *.iml
+
+# Runtime output artifacts
+api.log
+*.log
+search.json
+resolve.json
+stats.json
+
+# Editor and tooling caches
+.clj-kondo/
+.lsp/
+.calva/
+.portal/

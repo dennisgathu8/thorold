@@ -11,6 +11,7 @@
      GET /stats"
   (:require [reitit.ring :as ring]
             [ring.adapter.jetty :as jetty]
+            [ring.middleware.params :refer [wrap-params]]
             [cheshire.core :as json]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
@@ -150,19 +151,7 @@
         (log/error e "Unhandled exception in API handler")
         (error-response "Internal server error" "internal_error" 500)))))
 
-(defn wrap-query-params
-  "Simple query parameter parsing middleware."
-  [handler]
-  (fn [request]
-    (let [query-string (:query-string request)
-          params       (when query-string
-                         (into {}
-                               (map (fn [pair]
-                                      (let [[k v] (str/split pair #"=" 2)]
-                                        [(java.net.URLDecoder/decode (or k "") "UTF-8")
-                                         (java.net.URLDecoder/decode (or v "") "UTF-8")])))
-                               (str/split query-string #"&")))]
-      (handler (assoc request :query-params (or params {}))))))
+
 
 ;; ---------------------------------------------------------------------------
 ;; Router and app
@@ -186,7 +175,7 @@
          (ring/create-default-handler
           {:not-found (fn [_] (error-response "Not found" "not_found" 404))}))]
     (-> handler
-        wrap-query-params
+        wrap-params
         wrap-exceptions)))
 
 ;; ---------------------------------------------------------------------------

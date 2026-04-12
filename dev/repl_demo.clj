@@ -3,169 +3,207 @@
 ;; systematic notation with a pencil and miner's helmet. This is his successor.
 ;;
 ;; This file is a first-class deliverable — a literate walkthrough evaluable
-;; top-to-bottom in a fresh REPL. Every block is commented explaining what it
-;; shows and why it matters for the Clojure-as-data-engineering argument.
+;; top-to-bottom in a fresh REPL. Every block explains what it shows and why
+;; it matters for the Clojure-as-data-engineering argument.
+;;
+;; Start a REPL with: clj -M:dev
+;; Then evaluate each block in order.
 
 (ns repl-demo
-  (:require [thorold.db :as db]
+  (:require [thorold.db    :as db]
             [thorold.query :as q]
             [thorold.index :as idx]
             [thorold.model :as model]
-            [thorold.id :as id]
+            [thorold.id    :as id]
             [thorold.ingest :as ingest]
-            [clojure.data :as data]))
+            [clojure.data  :as data]))
 
 ;; ============================================================================
-;; 1. The entire database as one immutable value
-;; ============================================================================
+;; BLOCK 1 — The entire database as one immutable value
 ;;
-;; Football data is maps and sequences. The entire Thorold database loads into
-;; a single Clojure map. No ORM, no connection pool, no global state. Just data.
+;; This is the central argument. The entire Thorold dataset — ~475k entities
+;; across players, coaches, teams, competitions and seasons — is loaded into
+;; a single Clojure map. It is an ordinary value: you can pass it to functions,
+;; hold multiple versions simultaneously, and inspect it at the REPL instantly.
+;; No ORM. No connection pool. No query language. Just a map.
+;; ============================================================================
 
 (def db (db/load-db "data/"))
 
-;; What does the database look like?
+;; The database is a plain map. Inspect its top-level keys:
 (keys db)
 ;; => (:entities :indexes :names :meta)
 
-;; How many entities?
+;; How many entities are loaded?
 (count (:entities db))
-;; => ~475,000
+;; => ~475134
 
-;; What's in :meta?
+;; The :meta key carries load diagnostics:
 (:meta db)
-;; => {:people-count 429785, :teams-count 45349, :names-count 0, :load-ms ...}
+;; => {:people-count ... :teams-count ... :load-ms ...}
 
 ;; ============================================================================
-;; 2. Search, resolve, translate — pure functions over that value
-;; ============================================================================
+;; BLOCK 2 — Queries are pure functions over that value
 ;;
-;; Every query function is pure: it takes the DB value and returns a result.
-;; No hidden state, no side effects, no network calls. You can call these
-;; functions in tests, in the REPL, or in production — they behave identically.
+;; search, resolve, translate, and lookup are all pure functions. They take
+;; the db value and return results. No side effects, no network, no state.
+;; You can run them in a test, in a pipeline, or at the REPL identically.
+;; ============================================================================
 
-;; Search by name — fuzzy matching with relevance scoring
-(q/search db "Erling Haaland" {:type :person/player})
+;; Search by name — fuzzy, case-insensitive, diacritic-tolerant
+(q/search db "Lionel Messi" {:limit 3})
 
-;; Resolve: "I have a Transfermarkt ID, who is this?"
+;; Resolve a provider ID to a Thorold entity
 (q/resolve db :transfermarkt "28003")
 
-;; Translate: Transfermarkt ID → FBref ID (pipe-friendly, returns just the string)
-(q/translate db "reep_p2804f5db" :fbref)
-;; => "dc7f8a28"
+;; Translate a Reep ID to a specific provider's ID
+(q/translate db "reep_pbd9a559b" :fbref)
 
-;; Lookup by Reep ID
-(q/lookup db "reep_p2804f5db")
+;; Look up directly by Reep ID
+(q/lookup db "reep_pbd9a559b")
 
-;; Lookup by Wikidata QID
+;; Look up by Wikidata QID — same function, different input shape
 (q/lookup db "Q615")
 
 ;; ============================================================================
-;; 3. Two snapshots, one diff — structural comparison for free
-;; ============================================================================
+;; BLOCK 3 — The providers map: 40+ providers, one clean structure
 ;;
-;; Because the database is immutable data, you can compare two versions
-;; with a single function call. This is Clojure's killer feature for
-;; data engineering — no custom diff logic needed.
+;; In the original Reep system, provider IDs were 40+ flat string columns in
+;; a SQL table. In Thorold they live under a single :providers map per entity.
+;; Adding a new provider is adding a key. No schema migration required.
+;; ============================================================================
 
-(def db-v1 db)
+(def messi (q/lookup db "Q615"))
 
-;; Simulate a change: add a new provider ID for Messi
-(def db-v2
-  (let [messi-id "reep_pbd9a559b"
-        updated-entity (assoc-in (get (:entities db) messi-id)
-                                 [:providers :whoscored] "11119")]
-    (assoc-in db [:entities messi-id] updated-entity)))
+;; All provider IDs for one entity, as a plain Clojure map:
+(:providers messi)
 
-;; What changed?
-(let [[only-in-v1 only-in-v2 _both] (data/diff (:entities db-v1) (:entities db-v2))]
-  {:removed only-in-v1
-   :added   only-in-v2})
-;; Shows exactly which entity changed and what the old/new values are
+;; Translate to any provider with a simple get:
+(get-in messi [:providers :sofascore])
+(get-in messi [:providers :wyscout])
+(get-in messi [:providers :fbref])
 
 ;; ============================================================================
-;; 4. The ingestion pipeline over a fixture
-;; ============================================================================
+;; BLOCK 4 — Diffing two snapshots: structural comparison for free
 ;;
-;; The Wikidata SPARQL pipeline is a composed transducer chain.
-;; Each stage is a separate transducer — composable and independently testable.
-;; No intermediate collections are ever materialized.
+;; Because the database is an immutable value, diffing two snapshots is a
+;; single function call. clojure.data/diff returns [only-in-a, only-in-b,
+;; in-both]. This gives you a changelog between any two database versions
+;; with zero infrastructure — no event sourcing, no audit tables, no triggers.
+;; ============================================================================
+
+;; Simulate a database update by merging one new entity
+(def updated-db
+  (first (ingest/merge-into-db
+          db
+          [{:reep/id    "reep_p_example"
+            :reep/type  :person/player
+            :person/name "New Player"
+            :providers   {:transfermarkt "999999" :wikidata "Q9999999"}}])))
+
+;; Diff the two versions — what changed?
+(def diff-result (data/diff (:entities db) (:entities updated-db)))
+
+;; Only in original (nothing removed):
+(count (first diff-result))
+
+;; Only in updated (our new entity):
+(keys (second diff-result))
+
+;; In both (everything else unchanged — structural sharing at work):
+(= (count (nth diff-result 2)) (count (:entities db)))
+
+;; ============================================================================
+;; BLOCK 5 — The ingestion pipeline over a fixture
+;;
+;; The Wikidata ingestion pipeline is a composed transducer chain. Each stage
+;; is a named, independently testable transducer. The pipeline processes
+;; SPARQL result bindings without ever materializing the full intermediate
+;; collection. Here we run it over an inline fixture.
+;; ============================================================================
 
 (def sparql-fixture
-  [{"item"       {"value" "http://www.wikidata.org/entity/Q615"}
-    "itemLabel"  {"value" "Lionel Messi"}
-    "type"       {"value" "player"}
-    "dob"        {"value" "1987-06-24"}
-    "id_transfermarkt" {"value" "28003"}
-    "id_fbref"   {"value" "d70ce98e"}}])
+  [{"item"      {"value" "http://www.wikidata.org/entity/Q123456"}
+    "itemLabel" {"value" "Example Player"}
+    "type"      {"value" "player"}
+    "id_transfermarkt" {"value" "999888"}
+    "id_fbref"  {"value" "abc123def"}}
+   {"item"      {"value" "http://www.wikidata.org/entity/Q123456"} ;; duplicate
+    "itemLabel" {"value" "Example Player Duplicate"}
+    "type"      {"value" "player"}}])
 
-;; Run the pipeline — each stage is visible and inspectable
+;; Run the pipeline — deduplication drops the second row
 (def new-entities (into [] (ingest/ingest-pipeline) sparql-fixture))
+(count new-entities)
+;; => 1
 
-;; Merge into the existing DB — pure function, returns [updated-db manifest]
-(let [[updated-db manifest] (ingest/merge-into-db db new-entities)]
-  (println "Manifest:" manifest)
-  ;; => {:added 0 :updated 1 :skipped 0 :conflicts []}
-  )
+;; The entity is a plain Clojure map
+(first new-entities)
+
+;; Merge into the database — returns [updated-db manifest]
+(def [db-v2 manifest] (ingest/merge-into-db db new-entities))
+manifest
+;; => {:added 1 :updated 0 :skipped 0 :conflicts []}
 
 ;; ============================================================================
-;; 5. Index construction — visible, inspectable, pure
-;; ============================================================================
+;; BLOCK 6 — Index construction: visible, inspectable, pure
 ;;
-;; All four indexes are built in a single reduce pass. No magic, no hidden
-;; schema, no query language. Just Clojure maps.
+;; All four indexes are built in a single reduce pass over the entities
+;; sequence. The function is pure — give it the same entities, get the same
+;; indexes. You can build them manually at the REPL to inspect the structure.
+;; ============================================================================
 
-(def indexes (idx/build-indexes (vals (:entities db))))
-(idx/index-stats indexes)
-;; => {:by-reep-id-count 475134, :by-provider-count ..., :by-qid-count ..., :by-name-count ...}
+;; Build indexes over a small hand-crafted dataset
+(def sample-entities
+  [{:reep/id "reep_p1" :reep/type :person/player
+    :person/name "Test Player"
+    :providers {:transfermarkt "111" :wikidata "Q111"}}
+   {:reep/id "reep_t1" :reep/type :team
+    :team/name "Test FC"
+    :providers {:transfermarkt "222" :wikidata "Q222"}}])
 
-;; The name index uses normalization for diacritics-insensitive matching
-(idx/normalize-name "José Mourinho")
-;; => "jose mourinho"
+(def sample-indexes (idx/build-indexes sample-entities))
 
-(idx/normalize-name "Müller")
-;; => "muller"
+;; Inspect each index directly:
+(:by-reep-id sample-indexes)
+(:by-provider sample-indexes)
+(:by-qid sample-indexes)
+(:by-name sample-indexes)
+
+;; Stats: how many entries in each index?
+(idx/index-stats sample-indexes)
 
 ;; ============================================================================
-;; 6. Entity shape — just data, all the way down
-;; ============================================================================
+;; BLOCK 7 — ID generation: deterministic vs random
 ;;
-;; An entity is a plain Clojure map. No classes, no protocols.
-;; Provider IDs are nested under :providers — not 40+ flat columns.
-
-(q/lookup db "reep_p2804f5db")
-;; => {:reep/id "reep_p2804f5db"
-;;     :reep/type :person/player
-;;     :person/name "Cole Palmer"
-;;     :person/dob "2002-05-06"
-;;     :providers {:transfermarkt "568177"
-;;                 :fbref "dc7f8a28"
-;;                 :sofascore "982780"
-;;                 :wikidata "Q99760796"
-;;                 ...}}
-
-;; Validate against the schema
-(model/valid? (q/lookup db "reep_p2804f5db"))
-;; => true
-
-;; ============================================================================
-;; 7. Reep IDs — the backbone
+;; The original Reep system minted IDs randomly using UUID4. Those IDs are
+;; preserved in the CSV files as the source of truth. Thorold adds a
+;; deterministic generator using SHA-256 for new entity IDs going forward.
+;;
+;; IMPORTANT: reep-id (deterministic) will NOT match existing CSV IDs.
+;; See the COMPATIBILITY WARNING in thorold.id/reep-id docstring.
 ;; ============================================================================
 
-;; Format: reep_<type_prefix><8hex>
-(id/valid-reep-id? "reep_p2804f5db")
-;; => true
+;; Deterministic: same seed always produces same ID (for new entities)
+(id/reep-id :player "Q_new_entity_123")
+(id/reep-id :player "Q_new_entity_123") ;; identical
 
-(id/reep-id-type "reep_p2804f5db")
-;; => :player
+;; Random: matches original minting behavior for backward compatibility
+(id/mint-reep-id :player) ;; different each call
 
-;; Deterministic generation from a seed
-(id/reep-id :player "Q615")
-;; => "reep_p<8hex>" — same every time
+;; Validate a known ID from the CSV:
+(id/valid-reep-id? "reep_pbd9a559b") ;; => true
+(id/reep-id-type   "reep_pbd9a559b") ;; => :player
 
-;; Random minting (matches original Reep behavior)
-(id/mint-reep-id :player)
-;; => "reep_p<random8hex>" — different every time
+;; ============================================================================
+;; BLOCK 8 — Database statistics
+;;
+;; db-stats returns a plain map summarising the loaded database.
+;; This is the same data shape returned by the GET /stats API endpoint.
+;; ============================================================================
 
-;; Database statistics
 (db/db-stats db)
+;; => {:total-entities 475134
+;;     :by-type {"person/player" 387284 "team" 43202 ...}
+;;     :by-provider {"wikidata" 458552 "transfermarkt" 441833 ...}
+;;     :load-ms ...}

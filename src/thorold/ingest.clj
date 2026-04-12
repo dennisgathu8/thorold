@@ -63,8 +63,16 @@
                  (:type entity)))))
 
 (defn xf-deduplicate
-  "Transducer: deduplicates by QID, keeping the first occurrence.
-   Stateful transducer — tracks seen QIDs."
+  "Stateful deduplication transducer. Drops any entity whose QID has already
+   been seen in the current pipeline run.
+
+   CAUTION: This transducer is stateful. It uses a volatile set internally to
+   track seen QIDs across the sequence. Consequences:
+   - A single pipeline instance cannot be safely shared across threads.
+   - It cannot be split or used in parallel transduction.
+   - Each call to (ingest-pipeline) creates a fresh independent instance,
+     which is the correct usage pattern.
+   - Do not reuse a pipeline instance across multiple sequences."
   []
   (fn [rf]
     (let [seen (volatile! #{})]

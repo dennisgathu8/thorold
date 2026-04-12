@@ -1,9 +1,7 @@
 (ns thorold.query
   "Search, resolve, translate, lookup — all pure functions.
-
-   Every function takes db as the first argument.
-   Returns nil on miss — never throws on not-found.
-   Throws ex-info with :thorold/error-type on malformed input."
+   Every function takes db as the first argument."
+  (:refer-clojure :exclude [resolve])
   (:require [clojure.string :as str]
             [thorold.index :as index]))
 
