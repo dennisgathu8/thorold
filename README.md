@@ -234,9 +234,10 @@ backward compatibility.
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | No | For AI-assisted entity matching (Claude Opus 4.6) |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `THOROLD_DATA_DIR` | No | `data/` | Path to the directory containing CSV data files |
+| `PORT` | No | `8080` | Port for the REST API server |
 
 All non-secret configuration is in `resources/config.edn`.
 

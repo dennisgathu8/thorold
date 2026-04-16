@@ -167,7 +167,7 @@
           [["/" {:get (fn [_req] (json-response
                                  {:name    "Thorold — The Football Entity Register"
                                   :version "1.0.0"
-                                  :docs    "https://github.com/withqwerty/thorold"}))}]
+                                  :docs    "https://github.com/dennisgathu8/thorold"}))}]
            ["/search"  {:get (fn [req] (handle-search req db))}]
            ["/resolve" {:get (fn [req] (handle-resolve req db))}]
            ["/lookup"  {:get (fn [req] (handle-lookup req db))}]
