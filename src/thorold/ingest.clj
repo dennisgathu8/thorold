@@ -7,7 +7,6 @@
    merge-into-db is a pure function: existing-db + new-entities → updated-db.
    Deterministic — same inputs always produce same output."
   (:require [clojure.string :as str]
-            [thorold.model :as model]
             [thorold.id :as id]
             [thorold.index :as index]))
 
@@ -106,7 +105,7 @@
   "Transducer: converts ingestion maps to Thorold entity maps
    matching the schema in thorold.model."
   []
-  (map (fn [{:keys [reep-id entity-type qid name type dob nationality providers]}]
+  (map (fn [{:keys [reep-id entity-type qid name dob nationality providers]}]
          (let [thorold-type (case entity-type
                               :player :person/player
                               :coach  :person/coach

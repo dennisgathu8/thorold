@@ -8,8 +8,7 @@
             [clojure.tools.cli :refer [parse-opts]]
             [clojure.data.json :as json]
             [thorold.db :as db]
-            [thorold.query :as query]
-            [thorold.id :as id]))
+            [thorold.query :as query]))
 
 ;; ---------------------------------------------------------------------------
 ;; Pure command functions — no I/O, no side effects
@@ -61,12 +60,12 @@
 
 (defn cmd-stats
   "Show database statistics."
-  [args db]
+  [_args db]
   (db/db-stats db))
 
 (defn cmd-download
   "Download command — placeholder. In Thorold, data is loaded from local CSV files."
-  [args db]
+  [args _db]
   {:message "Data is loaded from local CSV files in the data/ directory."
    :data-dir (or (:data-dir args) "data/")})
 

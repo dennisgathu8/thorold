@@ -4,8 +4,7 @@
    The database is one immutable value — a single Clojure map containing
    all entities and all indexes. No global vars. The caller holds and
    passes this value."
-  (:require [clojure.java.io :as io]
-            [clojure.tools.logging :as log]
+  (:require [clojure.tools.logging :as log]
             [thorold.parse :as parse]
             [thorold.index :as index]))
 

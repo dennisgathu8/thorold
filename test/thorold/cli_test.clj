@@ -1,6 +1,7 @@
 (ns thorold.cli-test
   "Tests for thorold.cli — captures output with with-out-str."
   (:require [clojure.test :refer [deftest is testing]]
+            [clojure.string :as str]
             [thorold.cli :as cli]
             [thorold.index :as index]))
 
@@ -8,7 +9,7 @@
   [{:reep/id     "reep_p2804f5db"
     :reep/type   :person/player
     :person/name "Cole Palmer"
-    :person/dob  "2002-05-06"
+    :reep/dob    "2002-05-06"
     :providers   {:transfermarkt "568177"
                   :fbref         "dc7f8a28"
                   :wikidata      "Q99760796"}}

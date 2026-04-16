@@ -8,8 +8,7 @@
    backward compatibility with the original Reep project."
   (:require [malli.core :as m]
             [malli.error :as me]
-            [malli.generator :as mg]
-            [malli.util :as mu]))
+            [malli.generator :as mg]))
 
 ;; ---------------------------------------------------------------------------
 ;; Provider schema

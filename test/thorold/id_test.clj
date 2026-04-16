@@ -87,16 +87,19 @@
                           (id/reep-id :player nil)))))
 
 ;; Property-based tests
+#_{:clj-kondo/ignore [:unresolved-symbol]}
 (defspec reep-id-always-valid-format 100
   (prop/for-all [seed (gen/not-empty gen/string-alphanumeric)
                  type (gen/elements [:player :coach :team :competition :season])]
     (id/valid-reep-id? (id/reep-id type seed))))
 
+#_{:clj-kondo/ignore [:unresolved-symbol]}
 (defspec reep-id-is-deterministic 100
   (prop/for-all [seed (gen/not-empty gen/string-alphanumeric)
                  type (gen/elements [:player :coach :team :competition :season])]
     (= (id/reep-id type seed) (id/reep-id type seed))))
 
+#_{:clj-kondo/ignore [:unresolved-symbol]}
 (defspec mint-reep-id-always-valid 100
   (prop/for-all [type (gen/elements [:player :coach :team :competition :season])]
     (id/valid-reep-id? (id/mint-reep-id type))))

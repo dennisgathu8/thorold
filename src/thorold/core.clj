@@ -18,7 +18,7 @@
       (let [data-dir (or (System/getenv "THOROLD_DATA_DIR") "data/")
             port     (Integer/parseInt (or (System/getenv "PORT") "8080"))
             db       (db/load-db data-dir)
-            server   (api/start-server db :port port)]
+            _server  (api/start-server db :port port)]
         ;; Block the main thread
         (.join (Thread/currentThread)))
       ;; CLI mode

@@ -121,8 +121,8 @@
           (json-response {:results [] :count 0}))))))
 
 (defn handle-stats
-  "GET /stats"
-  [_request db]
+  "Returns database statistics."
+  [_req db]
   (json-response (db/db-stats db)))
 
 ;; ---------------------------------------------------------------------------
@@ -164,7 +164,7 @@
   (let [handler
         (ring/ring-handler
          (ring/router
-          [["/" {:get (fn [req] (json-response
+          [["/" {:get (fn [_req] (json-response
                                  {:name    "Thorold — The Football Entity Register"
                                   :version "1.0.0"
                                   :docs    "https://github.com/withqwerty/thorold"}))}]

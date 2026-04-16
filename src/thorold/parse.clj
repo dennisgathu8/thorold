@@ -85,7 +85,7 @@
              :person/height-cm       (parse-height (get row "height_cm"))
              :providers              (-> (collect-providers row model/person-provider-keys)
                                          (add-wikidata-to-providers row))}))))
-    (catch Exception e
+    (catch Exception _
       nil)))
 
 (defn parse-people
@@ -126,7 +126,7 @@
          :team/stadium  (blank->nil (get row "stadium"))
          :providers     (-> (collect-providers row model/team-provider-keys)
                             (add-wikidata-to-providers row))}))
-    (catch Exception e
+    (catch Exception _
       nil)))
 
 (defn parse-teams
@@ -160,7 +160,7 @@
         {:name/qid   qid
          :name/name  name
          :name/alias alias}))
-    (catch Exception e
+    (catch Exception _
       nil)))
 
 (defn parse-names
