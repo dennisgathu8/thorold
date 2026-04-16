@@ -35,7 +35,7 @@ Same data. Same IDs. Better architecture.
 ## Installation
 
 ```bash
-git clone https://github.com/withqwerty/thorold.git
+git clone https://github.com/dennisgathu8/thorold.git
 cd thorold
 ```
 
