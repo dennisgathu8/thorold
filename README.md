@@ -166,6 +166,21 @@ walkthrough of the entire system.
 (clojure.data/diff db-v1 db-v2)
 ```
 
+## Testing & Performance
+
+Thorold features a comprehensive test suite covering all modules and API endpoints, alongside an immutable model benchmark suite powered by Criterium.
+
+**Run tests:**
+```bash
+clj -M:test
+```
+
+**Run benchmarks:**
+```bash
+clj -M:bench
+```
+On typical hardware, fuzzy name searches resolve in `<2µs`, while direct ID lookups and provider resolutions complete in `<100ns`. Continuous integration via GitHub Actions automatically caches Clojure dependencies and verifies all builds.
+
 ## Provider List
 
 Thorold maps IDs across 40+ football data providers:
@@ -241,6 +256,7 @@ thorold/
 │   ├── cli.clj        ← CLI commands
 │   └── api.clj        ← Ring/Reitit REST API
 ├── test/thorold/      ← Tests for every module
+├── bench/thorold/     ← Performance benchmarks (Criterium)
 ├── dev/               ← REPL utilities (never in production jar)
 ├── data/              ← Read-only source CSVs
 ├── output/            ← Generated files (gitignored)
@@ -253,8 +269,10 @@ thorold/
 1. Fork the repo
 2. Create a feature branch
 3. Write tests for any new functionality
-4. Ensure `clj -M:test` passes
-5. Submit a PR
+4. Run `clj-kondo --lint src test bench` to ensure 0 errors and warnings
+5. Ensure `clj -M:test` passes
+6. Validate performance overhead with `clj -M:bench`
+7. Submit a PR
 
 **Data contributions:** The CSV data files are regenerated weekly from Wikidata.
 Do not submit PRs modifying data files directly. If you have ID mappings to contribute,
