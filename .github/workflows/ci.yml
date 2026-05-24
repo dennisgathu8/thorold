@@ -38,11 +38,11 @@ jobs:
             ${{ runner.os }}-deps-
 
       - name: Run tests
-        run: clj -M:test
+        run: clojure -M:test
 
       - name: Verify no SLF4J warnings
         run: |
-          output=$(clj -M:test 2>&1)
+          output=$(clojure -M:test 2>&1)
           if echo "$output" | grep -q "SLF4J:"; then
             echo "FAIL: SLF4J warnings detected"
             exit 1
