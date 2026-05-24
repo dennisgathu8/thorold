@@ -1,4 +1,5 @@
 # Thorold
+[![CI](https://github.com/dennisgathu8/thorold/actions/workflows/ci.yml/badge.svg?branch=rewrite/thorold)](https://github.com/dennisgathu8/thorold/actions/workflows/ci.yml)
 
 **The football entity register, in Clojure.**
 
@@ -264,6 +265,123 @@ thorold/
 ├── resources/         ← config.edn
 └── docs/              ← Architecture docs
 ```
+
+## Usage with Python, R, and SQL
+
+The CSV files work with any data tool. No Clojure required.
+
+### Python
+
+```python
+import csv
+
+people = {}
+with open("data/people.csv") as f:
+    for row in csv.DictReader(f):
+        tm_id = row["key_transfermarkt"]
+        if tm_id:
+            people[tm_id] = row
+
+# Cole Palmer's FBref ID from his Transfermarkt ID
+palmer = people["568177"]
+print(palmer["key_fbref"])  # "dc7f8a28"
+```
+
+### R
+
+```r
+library(readr)
+people <- read_csv("data/people.csv")
+
+# All Premier League-registered players
+pl_players <- people |> filter(key_premier_league != "")
+
+# Cross-reference: Transfermarkt -> FBref
+people |>
+  filter(key_transfermarkt == "568177") |>
+  select(name, key_fbref, key_sofascore)
+```
+
+### SQL (SQLite)
+
+```bash
+sqlite3 thorold.db <<EOF
+.mode csv
+.import data/people.csv people
+.import data/teams.csv teams
+.import data/names.csv names
+EOF
+```
+
+```sql
+SELECT * FROM people WHERE name LIKE '%Salah%';
+SELECT * FROM people WHERE key_fbref = 'e342ad68';
+```
+
+## Provider Coverage
+
+| Provider | Coverage | Source | Notes |
+| --- | --- | --- | --- |
+| Transfermarkt | Best | Wikidata | Highest coverage across all entities |
+| FBref | Good | Wikidata | Strong for recent players |
+| Soccerway | Good | Wikidata | Broad international coverage |
+| Sofascore | Good | Wikidata | Modern players well covered |
+| Opta | Sparse | Wikidata | Few entries in Wikidata |
+| Premier League | Decent | Wikidata | PL players only |
+| Understat | ~2.3K | Custom | Matched via Transfermarkt bridge |
+| WhoScored | ~2.3K | Custom | Matched via Transfermarkt bridge |
+| SportMonks | ~600 | Custom | Players and teams via TM bridge |
+| API-Football | Growing | Custom | Name and DOB matching |
+| Club Elo | ~176 teams | Custom | Manual team mapping |
+| FotMob | ~4.6K | Custom | DOB and name matching, top 6 leagues |
+
+## Wikidata Properties
+
+All provider IDs are sourced from these Wikidata properties:
+
+| Property | Provider |
+| --- | --- |
+| [P2446](https://www.wikidata.org/wiki/Property:P2446) | Transfermarkt player ID |
+| [P2447](https://www.wikidata.org/wiki/Property:P2447) | Transfermarkt manager ID |
+| [P7223](https://www.wikidata.org/wiki/Property:P7223) | Transfermarkt team ID |
+| [P5750](https://www.wikidata.org/wiki/Property:P5750) | FBref player ID |
+| [P8642](https://www.wikidata.org/wiki/Property:P8642) | FBref squad ID |
+| [P2369](https://www.wikidata.org/wiki/Property:P2369) | Soccerway person ID |
+| [P6131](https://www.wikidata.org/wiki/Property:P6131) | Soccerway team ID |
+| [P12302](https://www.wikidata.org/wiki/Property:P12302) | Sofascore player ID |
+| [P8259](https://www.wikidata.org/wiki/Property:P8259) | Flashscore player ID |
+| [P8736](https://www.wikidata.org/wiki/Property:P8736) | Opta player ID |
+| [P8737](https://www.wikidata.org/wiki/Property:P8737) | Opta team ID |
+| [P12539](https://www.wikidata.org/wiki/Property:P12539) | Premier League player ID |
+| [P12551](https://www.wikidata.org/wiki/Property:P12551) | 11v11 player ID |
+| [P3681](https://www.wikidata.org/wiki/Property:P3681) | ESPN FC player ID |
+| [P2574](https://www.wikidata.org/wiki/Property:P2574) | National Football Teams ID |
+| [P2020](https://www.wikidata.org/wiki/Property:P2020) | WorldFootball.net ID |
+| [P2193](https://www.wikidata.org/wiki/Property:P2193) | Soccerbase player ID |
+| [P2276](https://www.wikidata.org/wiki/Property:P2276) | UEFA player ID |
+| [P7361](https://www.wikidata.org/wiki/Property:P7361) | UEFA team ID |
+| [P3665](https://www.wikidata.org/wiki/Property:P3665) | L'Equipe player ID |
+| [P9264](https://www.wikidata.org/wiki/Property:P9264) | FFF.fr player ID |
+| [P13064](https://www.wikidata.org/wiki/Property:P13064) | Lega Serie A player ID |
+| [P12577](https://www.wikidata.org/wiki/Property:P12577) | BeSoccer player ID |
+| [P3537](https://www.wikidata.org/wiki/Property:P3537) | FootballDatabase.eu person ID |
+| [P7351](https://www.wikidata.org/wiki/Property:P7351) | FootballDatabase.eu team ID |
+| [P3726](https://www.wikidata.org/wiki/Property:P3726) | EU-Football.info player ID |
+| [P12606](https://www.wikidata.org/wiki/Property:P12606) | Barry Hugman's Footballers ID |
+| [P4023](https://www.wikidata.org/wiki/Property:P4023) | German FA person ID |
+| [P12567](https://www.wikidata.org/wiki/Property:P12567) | StatMuse PL player ID |
+| [P12312](https://www.wikidata.org/wiki/Property:P12312) | Kicker team ID |
+| [P7876](https://www.wikidata.org/wiki/Property:P7876) | Flashscore team ID |
+| [P13897](https://www.wikidata.org/wiki/Property:P13897) | Sofascore team ID |
+| [P7454](https://www.wikidata.org/wiki/Property:P7454) | Soccerbase team ID |
+| [P7287](https://www.wikidata.org/wiki/Property:P7287) | WorldFootball.net team ID |
+| [P1469](https://www.wikidata.org/wiki/Property:P1469) | SoFIFA / EA FC player ID |
+| [P4381](https://www.wikidata.org/wiki/Property:P4381) | Soccerdonna player ID |
+| [P8134](https://www.wikidata.org/wiki/Property:P8134) | Soccerdonna coach ID |
+| [P11379](https://www.wikidata.org/wiki/Property:P11379) | Dongqiudi player ID |
+| [P7280](https://www.wikidata.org/wiki/Property:P7280) | PlaymakerStats team ID |
+
+The best way to improve coverage is to add missing provider IDs directly to Wikidata. The weekly data refresh picks them up automatically.
 
 ## Contributing
 

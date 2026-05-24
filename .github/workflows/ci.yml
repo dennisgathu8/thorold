@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [ "rewrite/thorold", "main" ]
+  pull_request:
+    branches: [ "rewrite/thorold", "main" ]
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install Clojure CLI
+        uses: DeLaGuardo/setup-clojure@12
+        with:
+          cli: '1.12.4.1602'
+
+      - name: Cache deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+            ~/.deps.clj
+          key: ${{ runner.os }}-deps-${{ hashFiles('deps.edn') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-
+
+      - name: Run tests
+        run: clj -M:test
+
+      - name: Verify no SLF4J warnings
+        run: |
+          output=$(clj -M:test 2>&1)
+          if echo "$output" | grep -q "SLF4J:"; then
+            echo "FAIL: SLF4J warnings detected"
+            exit 1
+          fi
+          echo "PASS: No SLF4J warnings"

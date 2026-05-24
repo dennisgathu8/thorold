@@ -1,26 +1,35 @@
-MIT License
+Creative Commons Legal Code
 
-Copyright (c) 2025 Dennis Gathu
+CC0 1.0 Universal
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+    CREATIVE COMMONS CORPORATION IS NOT A LAW FIRM AND DOES NOT PROVIDE
+    LEGAL SERVICES. DISTRIBUTION OF THIS DOCUMENT DOES NOT CREATE AN
+    ATTORNEY-CLIENT RELATIONSHIP. CREATIVE COMMONS PROVIDES THIS
+    INFORMATION ON AN "AS-IS" BASIS. CREATIVE COMMONS MAKES NO WARRANTIES
+    REGARDING THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS
+    PROVIDED HEREUNDER, AND DISCLAIMS LIABILITY FOR DAMAGES RESULTING FROM
+    THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS PROVIDED
+    HEREUNDER.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Statement of Purpose
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+The laws of most jurisdictions throughout the world automatically confer
+exclusive Copyright and Related Rights upon the creator and subsequent
+owner(s) of an original work of authorship and/or a database.
 
----
+Certain owners wish to permanently relinquish those rights to a Work for
+the purpose of contributing to a commons of creative, cultural and
+scientific works that the public can reliably and freely build upon,
+modify, incorporate in other works, cite, and distribute, as they wish,
+without apprehension of later claims by such owner.
 
-Data files in data/ are derived from Wikidata (https://www.wikidata.org/)
-and are licensed under CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/).
+To the greatest extent permitted by applicable law, Affirmer hereby
+overtly, fully, permanently, irrevocably and unconditionally waives,
+abandons, and surrenders all of Affirmer's Copyright and Related Rights
+and associated claims and causes of action in the Work.
+
+The data in this repository is derived from Wikidata
+(https://www.wikidata.org/) and is available under CC0 1.0
+(https://creativecommons.org/publicdomain/zero/1.0/).
+
+The Clojure source code is also released under CC0 1.0.
