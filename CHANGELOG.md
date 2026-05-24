@@ -1,21 +1,91 @@
 # Changelog
 
-All notable changes to Thorold will be documented in this file.
+All notable changes to Thorold are documented here.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+---
 
 ## [Unreleased]
 
+---
+
+## [1.1.0] — 2026-04-16
+
 ### Added
-- Initial Clojure re-implementation of Reep
-- Data model with Malli schemas (`thorold.model`)
-- Reep ID generation (`thorold.id`)
-- CSV parsers for people, teams, and names (`thorold.parse`)
-- Index builders: by-reep-id, by-provider, by-qid, by-name (`thorold.index`)
-- Database assembly from CSV files (`thorold.db`)
-- Query functions: search, resolve, translate, lookup (`thorold.query`)
-- Wikidata SPARQL ingestion pipeline (`thorold.ingest`)
-- CLI with all original Reep commands (`thorold.cli`)
-- REST API with Ring/Reitit (`thorold.api`)
-- REPL demo walkthrough (`dev/repl_demo.clj`)
-- Full test suite for all modules
+- `LICENSE` file with full CC0-1.0 legal text
+- GitHub Actions CI pipeline (`.github/workflows/ci.yml`) with
+  automated test execution and SLF4J warning verification on every push
+- CI badge in README
+- `openapi.yaml` — OpenAPI 3.1.0 specification covering all four API
+  endpoints with full request/response schemas
+- `schemas/people.md` — standalone column reference for `data/people.csv`
+- `schemas/teams.md` — standalone column reference for `data/teams.csv`
+- `schemas/names.md` — standalone column reference for `data/names.csv`
+- `scripts/refresh.clj` — runnable Babashka ingestion/refresh script
+- `scripts/README.md` — usage documentation for refresh script
+- `test/thorold/api_test.clj` — Ring handler unit tests (20+ assertions,
+  no HTTP server required)
+- `data/meta.json` — database generation metadata
+- README: Python, R, and SQL usage examples for CSV-direct access
+- README: provider coverage table with source and notes per provider
+- README: Wikidata property reference table (39 properties)
+- Repo topics, description, and website set via GitHub settings
+- `bench/thorold/` benchmark suite for load time and query performance
+
+### Fixed
+- `src/thorold/parse.clj`: replaced materialising `parse-people-with-errors`
+  and `parse-teams-with-errors` with transducer-based streaming
+  implementation — 488k rows now processed without holding the full
+  collection in memory
+- `deps.edn`: moved `slf4j-nop` to top-level `:deps` so API server and
+  all execution paths are silenced, not only the test runner
+- Removed committed runtime artifacts (`api.log`, `search.json`,
+  `resolve.json`, `stats.json`) and editor cache dirs (`.clj-kondo/`,
+  `.lsp/`) from version control
+- Updated `.gitignore` to prevent artifact and tooling cache recurrence
+
+### Changed
+- Commit history rewritten with descriptive scoped messages per module
+
+---
+
+## [1.0.1] — 2026-04-07
+
+### Fixed
+- `src/thorold/id.clj`: added `COMPATIBILITY WARNING` to `reep-id`
+  docstring — deterministic SHA-256 IDs will not match existing CSV IDs
+  which were randomly minted via UUID4
+- `src/thorold/api.clj`: replaced hand-rolled `wrap-query-params` with
+  `ring.middleware.params/wrap-params` — fixes edge cases with repeated
+  params and URL-encoded values
+- `src/thorold/ingest.clj`: added `CAUTION` docstring to `xf-deduplicate`
+  documenting its stateful `volatile!` internals
+- `src/thorold/query.clj`: added `(:refer-clojure :exclude [resolve])`
+  to eliminate namespace collision warning
+- `deps.edn`: added `slf4j-nop` to `:test` alias to silence SLF4J during
+  test runs
+- `dev/repl_demo.clj`: completed full 8-block literate REPL walkthrough
+
+---
+
+## [1.0.0] — 2026-04-01
+
+### Added
+- Complete rewrite of Reep in pure Clojure
+- Named after Thorold Charles Reep (1904–2002), founding father of
+  football analytics
+- 10 source modules: `model`, `id`, `parse`, `index`, `db`, `query`,
+  `ingest`, `cli`, `api`, `core`
+- Malli schemas with namespaced keywords for all five entity types:
+  player, coach, team, competition, season
+- Single-pass index builder across all four indexes in one `reduce` pass
+- Transducer-based Wikidata SPARQL ingestion pipeline — six composable
+  stages, no intermediate collections
+- Pure function query layer: `search`, `resolve`, `translate`, `lookup`
+- Ring/Reitit REST API with `db` value injected via closure — no global
+  state
+- CLI with `--format human/edn/json` output modes and correct exit codes
+- 47 tests, 175 assertions including property-based specs via `test.check`
+- `dev/repl_demo.clj` as literate REPL walkthrough
+- `resources/config.edn` for all non-secret runtime configuration
+- `SECURITY.md`, `CHANGELOG.md`, `README.md` from day one
