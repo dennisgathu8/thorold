@@ -22,7 +22,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Install Clojure CLI
-        uses: DeLaGuardo/setup-clojure@12
+        uses: DeLaGuardo/setup-clojure@12.5
         with:
           cli: '1.12.4.1602'
 
