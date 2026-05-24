@@ -97,14 +97,22 @@
 
 (defn parse-people-with-errors
   "Parses a sequence of CSV row maps, returning {:entities [...] :errors [...]}.
-   Unlike parse-people, this realizes the entire collection."
+   Uses transduce to run in a single pass without materialising intermediate sequences."
   [row-maps]
-  (reduce
-   (fn [acc row]
-     (if-let [entity (parse-person-row row)]
-       (update acc :entities conj entity)
-       (update acc :errors conj {:row row :reason "Failed to parse person row"})))
-   {:entities [] :errors []}
+  (transduce
+   (map (fn [row]
+          (if-let [e (parse-person-row row)]
+            {:ok true  :entity e}
+            {:ok false :row row})))
+   (fn
+     ([] {:entities (transient []) :errors (transient [])})
+     ([acc item]
+      (if (:ok item)
+        (update acc :entities conj! (:entity item))
+        (update acc :errors  conj! (:row item))))
+     ([acc]
+      {:entities (persistent! (:entities acc))
+       :errors   (persistent! (:errors acc))}))
    row-maps))
 
 ;; ---------------------------------------------------------------------------
@@ -135,14 +143,23 @@
   (keep parse-team-row row-maps))
 
 (defn parse-teams-with-errors
-  "Parses a sequence of CSV row maps, returning {:entities [...] :errors [...]}."
+  "Parses a sequence of CSV row maps, returning {:entities [...] :errors [...]}.
+   Uses transduce to run in a single pass without materialising intermediate sequences."
   [row-maps]
-  (reduce
-   (fn [acc row]
-     (if-let [entity (parse-team-row row)]
-       (update acc :entities conj entity)
-       (update acc :errors conj {:row row :reason "Failed to parse team row"})))
-   {:entities [] :errors []}
+  (transduce
+   (map (fn [row]
+          (if-let [e (parse-team-row row)]
+            {:ok true  :entity e}
+            {:ok false :row row})))
+   (fn
+     ([] {:entities (transient []) :errors (transient [])})
+     ([acc item]
+      (if (:ok item)
+        (update acc :entities conj! (:entity item))
+        (update acc :errors  conj! (:row item))))
+     ([acc]
+      {:entities (persistent! (:entities acc))
+       :errors   (persistent! (:errors acc))}))
    row-maps))
 
 ;; ---------------------------------------------------------------------------
@@ -172,9 +189,9 @@
 ;; CSV I/O boundary — these are the only functions that touch the filesystem
 ;; ---------------------------------------------------------------------------
 
-(defn- csv->row-maps
-  "Reads a CSV file and returns a lazy sequence of row maps
-   (header strings as keys, values as strings)."
+(defn- csv->row-maps-seq
+  "Returns a lazy seq of row maps from an open reader.
+   The caller is responsible for keeping the reader open during consumption."
   [reader]
   (let [data   (csv/read-csv reader)
         header (first data)
@@ -182,23 +199,26 @@
     (map #(zipmap header %) rows)))
 
 (defn parse-people-file
-  "I/O boundary. Opens data-dir/people.csv and returns parsed entities.
-   Returns {:entities [...] :errors [...] :count N}."
+  "Streams people.csv through the person transducer.
+   Never materialises the full 488k collection.
+   Returns {:entities [...] :errors [...] :count N}"
   [data-dir]
   (with-open [reader (io/reader (str data-dir "people.csv"))]
-    (let [result (parse-people-with-errors (csv->row-maps reader))]
+    (let [result (parse-people-with-errors (csv->row-maps-seq reader))]
       (assoc result :count (count (:entities result))))))
 
 (defn parse-teams-file
-  "I/O boundary. Opens data-dir/teams.csv and returns parsed entities."
+  "Streams teams.csv through the team transducer.
+   Never materialises the full collection."
   [data-dir]
   (with-open [reader (io/reader (str data-dir "teams.csv"))]
-    (let [result (parse-teams-with-errors (csv->row-maps reader))]
+    (let [result (parse-teams-with-errors (csv->row-maps-seq reader))]
       (assoc result :count (count (:entities result))))))
 
 (defn parse-names-file
   "I/O boundary. Opens data-dir/names.csv and returns parsed names."
   [data-dir]
   (with-open [reader (io/reader (str data-dir "names.csv"))]
-    (let [names (vec (parse-names (csv->row-maps reader)))]
+    (let [rows  (csv->row-maps-seq reader)
+          names (vec (parse-names rows))]
       {:names names :count (count names)})))
