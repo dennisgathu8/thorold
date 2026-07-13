@@ -16,6 +16,8 @@
             [thorold.model :as model]
             [thorold.id    :as id]
             [thorold.ingest :as ingest]
+            [thorold.history :as history]
+            [thorold.export :as export]
             [clojure.data  :as data]))
 
 ;; ============================================================================
@@ -207,3 +209,86 @@ manifest
 ;;     :by-type {"person/player" 387284 "team" 43202 ...}
 ;;     :by-provider {"wikidata" 458552 "transfermarkt" 441833 ...}
 ;;     :load-ms ...}
+
+;; ============================================================================
+;; BLOCK 9 — Time-Travel snapshot comparison (thorold.history)
+;;
+;; Pure time-travel analysis on database snapshot maps. Detects newly added
+;; entities, entities that gained/lost external provider IDs, and overall
+;; provider coverage changes without the noise of derived search indexes.
+;; ============================================================================
+
+(def db-v1
+  {:entities {"reep_p1" {:reep/id "reep_p1" :reep/type :person/player :person/name "Cole Palmer"
+                         :providers {:wikidata "Q99760796" :transfermarkt "568177"}}
+              "reep_p2" {:reep/id "reep_p2" :reep/type :person/player :person/name "Bukayo Saka"
+                         :providers {:wikidata "Q56677943"}}}})
+
+(def db-v2
+  {:entities {"reep_p1" {:reep/id "reep_p1" :reep/type :person/player :person/name "Cole Palmer"
+                         ;; Palmer gains fbref, loses transfermarkt
+                         :providers {:wikidata "Q99760796" :fbref "dc7f8a28"}}
+              "reep_p2" {:reep/id "reep_p2" :reep/type :person/player :person/name "Bukayo Saka"
+                         :providers {:wikidata "Q56677943"}}
+              "reep_p3" {:reep/id "reep_p3" :reep/type :person/player :person/name "New Entity"
+                         :providers {:wikidata "Q12345"}}}})
+
+;; Detect differences between snapshots
+(history/diff-snapshots db-v1 db-v2)
+;; => {:added ["reep_p3"] :removed []}
+
+;; Find external provider ID additions
+(history/new-provider-ids db-v1 db-v2)
+;; => {"reep_p1" #{:fbref}}
+
+;; Find external provider ID deletions
+(history/lost-provider-ids db-v1 db-v2)
+;; => {"reep_p1" #{:transfermarkt}}
+
+;; Track historical coverage delta for all providers
+(history/coverage-delta db-v1 db-v2)
+;; => {:wikidata 1, :transfermarkt -1, :fbref 1}
+
+;; ============================================================================
+;; BLOCK 10 — Stateful Ingestion Changelog Pipeline (xf-changelog)
+;;
+;; Ingesting fresh data can be analyzed via a stateful transducer that detects
+;; exactly what type of event has occurred relative to the existing database
+;; (:entity/added, :provider/updated, or :entity/unchanged).
+;; ============================================================================
+
+(def base-db
+  {:entities {"reep_p1" {:reep/id "reep_p1" :reep/type :person/player :person/name "Cole Palmer"
+                         :providers {:wikidata "Q99760796" :transfermarkt "568177"}}}})
+
+(def incoming-data
+  [{:reep/id "reep_p1" :reep/type :person/player :person/name "Cole Palmer"
+    :providers {:wikidata "Q99760796" :transfermarkt "568177" :fbref "dc7f8a28"}} ;; updated
+   {:reep/id "reep_p2" :reep/type :person/player :person/name "Bukayo Saka"
+    :providers {:wikidata "Q56677943"}} ;; added
+   {:reep/id "reep_p1" :reep/type :person/player :person/name "Cole Palmer"
+    :providers {:wikidata "Q99760796" :transfermarkt "568177" :fbref "dc7f8a28"}}]) ;; duplicate/unchanged
+
+;; Ingest stream using the stateful changelog transducer
+(into [] (ingest/xf-changelog base-db) incoming-data)
+;; =>
+;; [{:event-type :provider/updated, :reep-id "reep_p1", :before {...}, :after {...}}
+;;  {:event-type :entity/added, :reep-id "reep_p2", :entity {...}}
+;;  {:event-type :entity/unchanged, :reep-id "reep_p1"}]
+
+;; ============================================================================
+;; BLOCK 11 — Malli JSON Schema Export & EDN Round-trip (thorold.export)
+;;
+;; Non-Clojure consumers can read the formal entity specifications by exporting
+;; JSON Schema. Clojure/ClojureScript consumers can read full database EDN
+;; lossless round-trip serialization.
+;; ============================================================================
+
+;; Derive a standard JSON Schema from Malli model specifications
+(export/person-json-schema)
+
+(export/team-json-schema)
+
+;; Lossless EDN round-trip map containing entities, meta, and name indexes
+(export/db->edn db)
+

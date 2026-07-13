@@ -29,6 +29,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Known Gaps (Out of Scope for this Session)
 - First-class `match` entity type (`reep_m` prefix).
 - Type-aware `/resolve` and `/batch/resolve` to handle provider ID collisions across entity types.
+- Lack of benchmark suite coverage (`bench/thorold/`) for new history and export namespaces.
 
 ---
 
