@@ -7,6 +7,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [1.2.0] — 2026-07-13
+
 ### Added
 - **Reep Schema Sync (Part A)**:
   - Added new `key_opta_numeric` to person provider keys in `model.clj`.

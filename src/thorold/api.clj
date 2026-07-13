@@ -246,7 +246,7 @@
          (ring/router
           [["/" {:get (fn [_req] (json-response
                                  {:name    "Thorold — The Football Entity Register"
-                                  :version "1.0.0"
+                                  :version "1.2.0"
                                   :docs    "https://github.com/dennisgathu8/thorold"}))}]
            ["/search"  {:get (fn [req] (handle-search req db))}]
            ["/resolve" {:get (fn [req] (handle-resolve req db))}]
