@@ -154,7 +154,7 @@
    "key_sportmonks"            :sportmonks
    "key_api_football"          :api_football
    "key_fotmob"                :fotmob
-   "key_fpl_code"              :fpl_code
+   "key_opta_numeric"          :opta_numeric
    "key_thesportsdb"           :thesportsdb
    "key_skillcorner"           :skillcorner
    "key_wyscout"               :wyscout
@@ -186,3 +186,20 @@
    "key_understat"             :understat
    "key_opta_numeric"          :opta_numeric
    "key_capology"              :capology})
+
+(def competition-provider-keys
+  "All provider key columns in competitions.csv.
+   Verified against Reep's live data/competitions.csv header."
+  {"key_transfermarkt" :transfermarkt
+   "key_fbref"         :fbref
+   "key_opta"          :opta
+   "key_opta_numeric"  :opta_numeric
+   "key_optacore"      :optacore
+   "key_fotmob"        :fotmob
+   "key_whoscored"     :whoscored})
+
+(def season-provider-keys
+  "Provider key columns in seasons.csv.
+   Verified against Reep's live data/seasons.csv header — seasons have
+   no provider key columns beyond key_wikidata (handled separately)."
+  {})

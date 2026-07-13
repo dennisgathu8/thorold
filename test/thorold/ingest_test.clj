@@ -91,3 +91,44 @@
         (is (= 1 (:updated manifest)))
         (is (= "abc123" (get-in (:entities updated-db)
                                 ["reep_p11111111" :providers :fbref])))))))
+
+;; ---------------------------------------------------------------------------
+;; Changelog transducer tests
+;; ---------------------------------------------------------------------------
+
+(deftest xf-changelog-test
+  (let [entity-a {:reep/id "reep_p11111111"
+                  :reep/type :person/player
+                  :person/name "Player A"
+                  :providers {:transfermarkt "111"}}
+        entity-b {:reep/id "reep_p22222222"
+                  :reep/type :person/player
+                  :person/name "Player B"
+                  :providers {:transfermarkt "222"}}
+        indexes  (index/build-indexes [entity-a])
+        db       {:entities (:by-reep-id indexes) :indexes indexes}]
+
+    (testing "detects new entities"
+      (let [events (ingest/generate-changelog db [entity-b])]
+        (is (= 1 (count events)))
+        (is (= :entity/added (:type (first events))))
+        (is (= "reep_p22222222" (:reep-id (first events))))))
+
+    (testing "detects unchanged entities"
+      (let [events (ingest/generate-changelog db [entity-a])]
+        (is (= 1 (count events)))
+        (is (= :entity/unchanged (:type (first events))))))
+
+    (testing "detects provider updates"
+      (let [entity-a-updated (assoc-in entity-a [:providers :fbref] "abc")
+            events (ingest/generate-changelog db [entity-a-updated])]
+        (is (= 1 (count events)))
+        (is (= :provider/updated (:type (first events))))
+        (is (= {:fbref "abc"} (:added-ids (first events))))))
+
+    (testing "handles mixed events"
+      (let [entity-a-updated (assoc-in entity-a [:providers :fbref] "abc")
+            events (ingest/generate-changelog db [entity-a-updated entity-b])]
+        (is (= 2 (count events)))
+        (is (= :provider/updated (:type (first events))))
+        (is (= :entity/added (:type (second events))))))))

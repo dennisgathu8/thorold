@@ -17,6 +17,9 @@
    Returns a single immutable map: all entities plus all indexes.
    This value is the entire runtime state of Thorold.
 
+   Missing files (e.g. competitions.csv, seasons.csv) degrade gracefully
+   to empty collections — never an exception.
+
    Shape:
      {:entities  {reep-id → entity-map}
       :indexes   {:by-reep-id  ...
@@ -24,7 +27,8 @@
                   :by-qid      ...
                   :by-name     ...}
       :names     [name-alias-maps ...]
-      :meta      {:people-count N :teams-count N :errors-count N :load-ms N}}"
+      :meta      {:people-count N :teams-count N :competitions-count N
+                  :seasons-count N :errors-count N :load-ms N}}"
   [data-dir]
   (log/info "Loading Thorold database from" data-dir)
   (let [start-ms  (System/currentTimeMillis)
@@ -40,8 +44,37 @@
         names     (parse/parse-names-file data-dir)
         _         (log/info (str "  " (:count names) " name aliases parsed"))
 
+        ;; Competitions — graceful degradation if file is missing
+        _             (log/info "Parsing competitions.csv...")
+        competitions  (try
+                        (parse/parse-competitions-file data-dir)
+                        (catch java.io.FileNotFoundException _
+                          (log/info "  competitions.csv not found, skipping")
+                          {:entities [] :errors [] :count 0})
+                        (catch Exception e
+                          (log/warn e "  Failed to parse competitions.csv")
+                          {:entities [] :errors [] :count 0}))
+        _             (log/info (str "  " (:count competitions) " competitions parsed, "
+                                     (count (:errors competitions)) " errors"))
+
+        ;; Seasons — graceful degradation if file is missing
+        _         (log/info "Parsing seasons.csv...")
+        seasons   (try
+                    (parse/parse-seasons-file data-dir)
+                    (catch java.io.FileNotFoundException _
+                      (log/info "  seasons.csv not found, skipping")
+                      {:entities [] :errors [] :count 0})
+                    (catch Exception e
+                      (log/warn e "  Failed to parse seasons.csv")
+                      {:entities [] :errors [] :count 0}))
+        _         (log/info (str "  " (:count seasons) " seasons parsed, "
+                                 (count (:errors seasons)) " errors"))
+
         ;; Combine all entities into a single sequence for indexing
-        all-entities (concat (:entities people) (:entities teams))
+        all-entities (concat (:entities people)
+                             (:entities teams)
+                             (:entities competitions)
+                             (:entities seasons))
 
         _         (log/info "Building indexes...")
         indexes   (index/build-indexes all-entities)
@@ -52,12 +85,16 @@
     {:entities (:by-reep-id indexes)
      :indexes  indexes
      :names    (:names names)
-     :meta     {:people-count  (:count people)
-                :teams-count   (:count teams)
-                :names-count   (:count names)
-                :people-errors (count (:errors people))
-                :teams-errors  (count (:errors teams))
-                :load-ms       elapsed}}))
+     :meta     {:people-count       (:count people)
+                :teams-count        (:count teams)
+                :competitions-count (:count competitions)
+                :seasons-count      (:count seasons)
+                :names-count        (:count names)
+                :people-errors      (count (:errors people))
+                :teams-errors       (count (:errors teams))
+                :competitions-errors (count (:errors competitions))
+                :seasons-errors     (count (:errors seasons))
+                :load-ms            elapsed}}))
 
 ;; ---------------------------------------------------------------------------
 ;; Cached loading (dev-only convenience)

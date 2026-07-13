@@ -1,0 +1,41 @@
+[
+  {
+    "name": "clojure.lang.RT",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true,
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "clojure.lang.Var",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true,
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "clojure.lang.Keyword",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true,
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "clojure.lang.Symbol",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true,
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "clojure.lang.Reflector",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true,
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "cheshire.generate.JSONable",
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.ObjectMapper",
+    "allDeclaredMethods": true,
+    "allDeclaredConstructors": true
+  }
+]

@@ -7,6 +7,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- **Reep Schema Sync (Part A)**:
+  - Added new `key_opta_numeric` to person provider keys in `model.clj`.
+  - Added `competition-provider-keys` mapping for competitions.csv (7 provider mappings).
+  - Added `season-provider-keys` map (empty per verified seasons.csv layout).
+  - Added streaming CSV parsers for competitions and seasons in `parse.clj`.
+  - Added graceful loading of competitions/seasons in `db.clj` with file fallback.
+  - Added `/batch/lookup` and `/batch/resolve` POST endpoints in `api.clj` (max 100 limit, pure logic in `query.clj`).
+- **Clojure-Native Enhancements (Part B)**:
+  - Added `thorold.history` namespace for pure time-travel comparison across database snapshots.
+  - Added `xf-changelog` stateful transducer and `generate-changelog` pipeline in `ingest.clj`.
+  - Added `thorold.export` namespace for Malli-derived JSON Schema and EDN serialization exports.
+  - Added `/schema/person` and `/schema/team` endpoints to expose derived JSON schemas.
+  - Added `:native-image` alias in `deps.edn`, GraalVM configs, and standalone build script `scripts/build-native.sh`.
+  - Added `wrap-content-negotiation` middleware to support lossless EDN responses via the `Accept` header.
+
+### Removed
+- Removed deprecated `key_fpl_code` from person provider keys.
+
+### Known Gaps (Out of Scope for this Session)
+- First-class `match` entity type (`reep_m` prefix).
+- Type-aware `/resolve` and `/batch/resolve` to handle provider ID collisions across entity types.
+
 ---
 
 ## [1.1.0] — 2026-05-24

@@ -198,3 +198,72 @@
             :entities updated-entities
             :indexes  new-indexes)
      manifest]))
+
+;; ---------------------------------------------------------------------------
+;; Changelog transducer — compare incoming entities against existing db
+;; ---------------------------------------------------------------------------
+
+(defn xf-changelog
+  "Stateful transducer comparing incoming entities against existing-db.
+   Emits typed events — plain maps, EDN/JSON-serializable:
+
+   :entity/added     — entity not present in existing-db
+     {:type :entity/added :reep-id id :entity entity}
+
+   :provider/updated — entity exists but providers differ
+     {:type :provider/updated :reep-id id
+      :added-ids   {provider-kw id-string ...}
+      :removed-ids {provider-kw id-string ...}}
+
+   :entity/unchanged — entity exists and is identical
+     {:type :entity/unchanged :reep-id id}
+
+   CAUTION: Stateful — do not reuse across sequences or share across threads."
+  [existing-db]
+  (let [existing-entities (:entities existing-db)]
+    (map (fn [entity]
+           (let [reep-id  (:reep/id entity)
+                 existing (get existing-entities reep-id)]
+             (cond
+               ;; New entity
+               (nil? existing)
+               {:type    :entity/added
+                :reep-id reep-id
+                :entity  entity}
+
+               ;; Identical entity
+               (= existing entity)
+               {:type    :entity/unchanged
+                :reep-id reep-id}
+
+               ;; Providers changed
+               :else
+               (let [old-providers (:providers existing)
+                     new-providers (:providers entity)
+                     all-keys      (into (set (keys old-providers))
+                                         (keys new-providers))
+                     added-ids     (reduce (fn [acc k]
+                                            (if (and (get new-providers k)
+                                                     (not (get old-providers k)))
+                                              (assoc acc k (get new-providers k))
+                                              acc))
+                                          {}
+                                          all-keys)
+                     removed-ids   (reduce (fn [acc k]
+                                             (if (and (get old-providers k)
+                                                      (not (get new-providers k)))
+                                               (assoc acc k (get old-providers k))
+                                               acc))
+                                           {}
+                                           all-keys)]
+                 {:type        :provider/updated
+                  :reep-id     reep-id
+                  :added-ids   added-ids
+                  :removed-ids removed-ids})))))))
+
+(defn generate-changelog
+  "Runs the changelog transducer over new-entities, comparing against
+   existing-db. Returns the seq of changelog events.
+   Pure given its inputs — no I/O."
+  [existing-db new-entities]
+  (into [] (xf-changelog existing-db) new-entities))

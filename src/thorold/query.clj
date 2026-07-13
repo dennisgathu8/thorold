@@ -144,3 +144,41 @@
              (take limit)
              vec)]
     results))
+
+;; ---------------------------------------------------------------------------
+;; Batch operations — pure functions over db
+;; ---------------------------------------------------------------------------
+
+(defn batch-lookup
+  "Looks up multiple entities by Reep ID or Wikidata QID.
+   Returns {:results [...] :count N :not_found N}.
+   Pure function — no I/O, no side effects."
+  [db ids]
+  (let [results (into []
+                      (keep (fn [id]
+                              (try
+                                (lookup db id)
+                                (catch Exception _ nil))))
+                      ids)]
+    {:results   results
+     :count     (count results)
+     :not_found (- (count ids) (count results))}))
+
+(defn batch-resolve
+  "Resolves multiple provider ID pairs to entities.
+   items: seq of {:provider kw-or-string :id string} maps.
+   Returns {:results [...] :count N :not_found N}.
+   Pure function — no I/O, no side effects."
+  [db items]
+  (let [results (into []
+                      (keep (fn [{:keys [provider id]}]
+                              (try
+                                (let [p (if (keyword? provider)
+                                          provider
+                                          (keyword provider))]
+                                  (resolve db p id))
+                                (catch Exception _ nil))))
+                      items)]
+    {:results   results
+     :count     (count results)
+     :not_found (- (count items) (count results))}))

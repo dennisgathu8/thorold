@@ -2,6 +2,7 @@
   "Pure function tests for thorold.api using plain Ring request maps."
   (:require [clojure.test :refer [deftest is testing]]
             [cheshire.core :as json]
+            [clojure.edn :as edn]
             [thorold.api :as api]
             [thorold.index :as index]))
 
@@ -158,3 +159,72 @@
       (is (= 2 (:total-entities body)))
       (is (= 1 (get-in body [:by-type :player])))
       (is (= 1 (get-in body [:by-type :team]))))))
+
+(deftest batch-lookup-test
+  (testing "valid batch lookup"
+    (let [req  {:body (json/generate-string {"ids" ["reep_p2804f5db" "Q19080" "invalid"]})}
+          resp (api/handle-batch-lookup req mock-db)
+          body (parse-json-body resp)]
+      (is (= 200 (:status resp)))
+      (is (= 2 (:count body)))
+      (is (= 1 (:not_found body)))
+      (is (= "Cole Palmer" (:name_en (first (:results body)))))
+      (is (= "Chelsea" (:name_en (second (:results body)))))))
+
+  (testing "batch lookup with missing ids"
+    (let [req  {:body (json/generate-string {})}
+          resp (api/handle-batch-lookup req mock-db)
+          body (parse-json-body resp)]
+      (is (= 400 (:status resp)))
+      (is (= "missing_param" (:code body)))))
+
+  (testing "batch lookup over limit"
+    (let [ids  (mapv #(str "reep_p" %) (range 101))
+          req  {:body (json/generate-string {"ids" ids})}
+          resp (api/handle-batch-lookup req mock-db)
+          body (parse-json-body resp)]
+      (is (= 400 (:status resp)))
+      (is (= "batch_limit_exceeded" (:code body))))))
+
+(deftest batch-resolve-test
+  (testing "valid batch resolve"
+    (let [req  {:body (json/generate-string {"items" [{"provider" "transfermarkt" "id" "568177"}
+                                                     {"provider" "wikidata" "id" "Q19080"}
+                                                     {"provider" "transfermarkt" "id" "99999"}]})}
+          resp (api/handle-batch-resolve req mock-db)
+          body (parse-json-body resp)]
+      (is (= 200 (:status resp)))
+      (is (= 2 (:count body)))
+      (is (= 1 (:not_found body)))))
+
+  (testing "batch resolve over limit"
+    (let [items (mapv (fn [i] {"provider" "transfermarkt" "id" (str i)}) (range 101))
+          req   {:body (json/generate-string {"items" items})}
+          resp  (api/handle-batch-resolve req mock-db)
+          body  (parse-json-body resp)]
+      (is (= 400 (:status resp)))
+      (is (= "batch_limit_exceeded" (:code body))))))
+
+(deftest content-negotiation-test
+  (testing "serves EDN when Accept header requests it"
+    (let [app    (api/create-app mock-db)
+          req    {:request-method :get
+                  :uri            "/stats"
+                  :headers        {"accept" "application/edn"}}
+          resp   (app req)
+          body   (edn/read-string (:body resp))]
+      (is (= 200 (:status resp)))
+      (is (= "application/edn" (get-in resp [:headers "Content-Type"])))
+      (is (= 2 (:total-entities body)))))
+
+  (testing "serves JSON when Accept header requests JSON or is missing"
+    (let [app    (api/create-app mock-db)
+          req    {:request-method :get
+                  :uri            "/stats"
+                  :headers        {"accept" "application/json"}}
+          resp   (app req)
+          body   (parse-json-body resp)]
+      (is (= 200 (:status resp)))
+      (is (= "application/json" (get-in resp [:headers "Content-Type"])))
+      (is (= 2 (:total-entities body))))))
+

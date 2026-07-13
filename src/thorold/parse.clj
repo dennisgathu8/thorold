@@ -186,6 +186,97 @@
   (keep parse-name-row row-maps))
 
 ;; ---------------------------------------------------------------------------
+;; Competition parsing
+;; ---------------------------------------------------------------------------
+
+(defn- parse-competition-row
+  "Parses a single CSV row map into a competition entity map.
+   Returns the entity map or nil if the row is invalid."
+  [row]
+  (try
+    (let [reep-id (blank->nil (get row "reep_id"))
+          name    (blank->nil (get row "name"))]
+      (when (and reep-id name)
+        {:reep/id            reep-id
+         :reep/type          :competition
+         :competition/name   name
+         :competition/country (blank->nil (get row "country"))
+         :providers          (-> (collect-providers row model/competition-provider-keys)
+                                 (add-wikidata-to-providers row))}))
+    (catch Exception _
+      nil)))
+
+(defn parse-competitions
+  "Parses a sequence of CSV row maps into a sequence of competition entity maps."
+  [row-maps]
+  (keep parse-competition-row row-maps))
+
+(defn parse-competitions-with-errors
+  "Parses a sequence of CSV row maps, returning {:entities [...] :errors [...]}."
+  [row-maps]
+  (transduce
+   (map (fn [row]
+          (if-let [e (parse-competition-row row)]
+            {:ok true  :entity e}
+            {:ok false :row row})))
+   (fn
+     ([] {:entities (transient []) :errors (transient [])})
+     ([acc item]
+      (if (:ok item)
+        (update acc :entities conj! (:entity item))
+        (update acc :errors  conj! (:row item))))
+     ([acc]
+      {:entities (persistent! (:entities acc))
+       :errors   (persistent! (:errors acc))}))
+   row-maps))
+
+;; ---------------------------------------------------------------------------
+;; Season parsing
+;; ---------------------------------------------------------------------------
+
+(defn- parse-season-row
+  "Parses a single CSV row map into a season entity map.
+   Returns the entity map or nil if the row is invalid.
+   Seasons have no provider key columns beyond key_wikidata."
+  [row]
+  (try
+    (let [reep-id (blank->nil (get row "reep_id"))
+          name    (blank->nil (get row "name"))]
+      (when (and reep-id name)
+        {:reep/id                    reep-id
+         :reep/type                  :season
+         :season/name                name
+         :season/competition-reep-id (blank->nil (get row "competition_reep_id"))
+         :providers                  (-> (collect-providers row model/season-provider-keys)
+                                         (add-wikidata-to-providers row))}))
+    (catch Exception _
+      nil)))
+
+(defn parse-seasons
+  "Parses a sequence of CSV row maps into a sequence of season entity maps."
+  [row-maps]
+  (keep parse-season-row row-maps))
+
+(defn parse-seasons-with-errors
+  "Parses a sequence of CSV row maps, returning {:entities [...] :errors [...]}."
+  [row-maps]
+  (transduce
+   (map (fn [row]
+          (if-let [e (parse-season-row row)]
+            {:ok true  :entity e}
+            {:ok false :row row})))
+   (fn
+     ([] {:entities (transient []) :errors (transient [])})
+     ([acc item]
+      (if (:ok item)
+        (update acc :entities conj! (:entity item))
+        (update acc :errors  conj! (:row item))))
+     ([acc]
+      {:entities (persistent! (:entities acc))
+       :errors   (persistent! (:errors acc))}))
+   row-maps))
+
+;; ---------------------------------------------------------------------------
 ;; CSV I/O boundary — these are the only functions that touch the filesystem
 ;; ---------------------------------------------------------------------------
 
@@ -222,3 +313,19 @@
     (let [rows  (csv->row-maps-seq reader)
           names (vec (parse-names rows))]
       {:names names :count (count names)})))
+
+(defn parse-competitions-file
+  "Streams competitions.csv through the competition parser.
+   Returns {:entities [...] :errors [...] :count N}"
+  [data-dir]
+  (with-open [reader (io/reader (str data-dir "competitions.csv"))]
+    (let [result (parse-competitions-with-errors (csv->row-maps-seq reader))]
+      (assoc result :count (count (:entities result))))))
+
+(defn parse-seasons-file
+  "Streams seasons.csv through the season parser.
+   Returns {:entities [...] :errors [...] :count N}"
+  [data-dir]
+  (with-open [reader (io/reader (str data-dir "seasons.csv"))]
+    (let [result (parse-seasons-with-errors (csv->row-maps-seq reader))]
+      (assoc result :count (count (:entities result))))))

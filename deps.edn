@@ -31,6 +31,8 @@
 
   :api     {:main-opts ["-m" "thorold.core" "api"]}
 
+  :native-image {:extra-paths ["native-image-config"]}
+
   :uberjar {:extra-deps {com.github.seancorfield/depstar
                          {:mvn/version "2.1.303"}}
             :exec-fn    hf.depstar/uberjar

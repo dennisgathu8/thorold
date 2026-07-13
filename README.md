@@ -139,6 +139,47 @@ curl "http://localhost:8080/lookup?id=Q615"
 curl "http://localhost:8080/stats"
 ```
 
+#### `POST /batch/lookup`
+Allows batch lookup of up to 100 entities in a single request by Reep ID or Wikidata QID.
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"ids": ["reep_p2804f5db", "Q19080", "invalid"]}' \
+  "http://localhost:8080/batch/lookup"
+```
+```json
+{
+  "results": [...],
+  "count": 2,
+  "not_found": 1
+}
+```
+
+#### `POST /batch/resolve`
+Allows batch resolution of up to 100 provider/ID pairs in a single request.
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"items": [{"provider": "transfermarkt", "id": "568177"}, {"provider": "wikidata", "id": "Q19080"}]}' \
+  "http://localhost:8080/batch/resolve"
+```
+
+#### `GET /schema/person`
+Returns the Malli-derived JSON Schema for validating Person entities.
+```bash
+curl "http://localhost:8080/schema/person"
+```
+
+#### `GET /schema/team`
+Returns the Malli-derived JSON Schema for validating Team entities.
+```bash
+curl "http://localhost:8080/schema/team"
+```
+
+### Content Negotiation
+The API supports content negotiation via the standard `Accept` header. By default, responses are served as JSON. To request raw, lossless EDN for Clojure/ClojureScript consumers:
+```bash
+curl -H "Accept: application/edn" "http://localhost:8080/stats"
+```
+
 ## REPL Quickstart
 
 ```bash
@@ -181,6 +222,28 @@ clj -M:test
 clj -M:bench
 ```
 On typical hardware, fuzzy name searches resolve in `<2µs`, while direct ID lookups and provider resolutions complete in `<100ns`. Continuous integration via GitHub Actions automatically caches Clojure dependencies and verifies all builds.
+
+## Building a Native Binary
+
+Thorold can be compiled into a standalone, self-contained native executable using GraalVM. This eliminates JVM startup overhead and provides a zero-dependency binary suitable for CLI tools and serverless environments.
+
+### Requirements
+- **GraalVM 21+** (Java 21)
+- The `native-image` tool installed via GraalVM (`gu install native-image` if not bundled)
+
+### Compile
+Run the build script:
+```bash
+./scripts/build-native.sh
+```
+
+This clean builds the project, generates an AOT-compiled uberjar, and compiles it via `native-image` using the configurations stored in `native-image-config/`.
+
+### Expected Performance
+*Note: Because GraalVM is not installed on the current host, these metrics are unverified projections:*
+- **Build Time**: Expected ~1–2 minutes on standard hardware.
+- **Binary Size**: Expected ~30 MB (fully standalone).
+- **Startup Time**: Expected ~5–10 ms (vs ~1.5 seconds on JVM).
 
 ## Provider List
 

@@ -132,6 +132,86 @@ paths:
               schema:
                 $ref: "#/components/schemas/StatsResponse"
 
+  /batch/lookup:
+    post:
+      summary: Batch lookup by Reep IDs or Wikidata QIDs
+      description: |
+        Look up multiple entities by Reep ID or Wikidata QID in a single request.
+        Maximum 100 items per request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchLookupRequest"
+      responses:
+        "200":
+          description: Batch lookup results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatchResponse"
+        "400":
+          description: Missing parameters or batch limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /batch/resolve:
+    post:
+      summary: Batch resolve provider IDs to entities
+      description: |
+        Resolve multiple provider ID pairs to entities in a single request.
+        Maximum 100 items per request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchResolveRequest"
+      responses:
+        "200":
+          description: Batch resolve results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatchResponse"
+        "400":
+          description: Missing parameters or batch limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /schema/person:
+    get:
+      summary: JSON Schema for person entities
+      description: |
+        Returns a JSON Schema derived from the Malli PersonSchema.
+        Useful for non-Clojure consumers who need to validate person data.
+      responses:
+        "200":
+          description: JSON Schema for person entities
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /schema/team:
+    get:
+      summary: JSON Schema for team entities
+      description: |
+        Returns a JSON Schema derived from the Malli TeamSchema.
+        Useful for non-Clojure consumers who need to validate team data.
+      responses:
+        "200":
+          description: JSON Schema for team entities
+          content:
+            application/json:
+              schema:
+                type: object
+
 components:
   schemas:
     Entity:
@@ -198,6 +278,48 @@ components:
           items:
             $ref: "#/components/schemas/Entity"
         count:
+          type: integer
+
+    BatchLookupRequest:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+          maxItems: 100
+          example: ["reep_p2804f5db", "Q615"]
+
+    BatchResolveRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [provider, id]
+            properties:
+              provider:
+                type: string
+                example: "transfermarkt"
+              id:
+                type: string
+                example: "28003"
+
+    BatchResponse:
+      type: object
+      required: [results, count, not_found]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/Entity"
+        count:
+          type: integer
+        not_found:
           type: integer
 
     StatsResponse:

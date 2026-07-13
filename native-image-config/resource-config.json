@@ -1,0 +1,10 @@
+{
+  "resources": {
+    "includes": [
+      {"pattern": "config.edn"},
+      {"pattern": ".*\\.edn$"},
+      {"pattern": ".*\\.yaml$"},
+      {"pattern": ".*\\.json$"}
+    ]
+  }
+}

@@ -16,7 +16,8 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [thorold.query :as query]
-            [thorold.db :as db]))
+            [thorold.db :as db]
+            [thorold.export :as export]))
 
 ;; ---------------------------------------------------------------------------
 ;; Response helpers
@@ -125,6 +126,62 @@
   [_req db]
   (json-response (db/db-stats db)))
 
+(defn- parse-json-body
+  "Parses a JSON request body. Returns nil on failure."
+  [request]
+  (try
+    (when-let [body (:body request)]
+      (let [s (if (string? body)
+                body
+                (slurp body))]
+        (when (seq s)
+          (json/parse-string s))))
+    (catch Exception _ nil)))
+
+(defn handle-batch-lookup
+  "POST /batch/lookup  body: {\"ids\": [\"reep_p...\", \"Q615\", ...]}
+   Max 100 items. Returns {:results [...] :count N :not_found N}."
+  [request db]
+  (let [body (parse-json-body request)
+        ids  (get body "ids")]
+    (cond
+      (not (sequential? ids))
+      (error-response "Required: {\"ids\": [...]}" "missing_param" 400)
+
+      (> (count ids) 100)
+      (error-response "Maximum 100 items per batch request" "batch_limit_exceeded" 400)
+
+      :else
+      (let [result   (query/batch-lookup db ids)
+            api-results (mapv entity->api-map (:results result))]
+        (json-response {:results   api-results
+                        :count     (count api-results)
+                        :not_found (:not_found result)})))))
+
+(defn handle-batch-resolve
+  "POST /batch/resolve  body: {\"items\": [{\"provider\": \"transfermarkt\", \"id\": \"28003\"}]}
+   Max 100 items. Returns {:results [...] :count N :not_found N}."
+  [request db]
+  (let [body  (parse-json-body request)
+        items (get body "items")]
+    (cond
+      (not (sequential? items))
+      (error-response "Required: {\"items\": [{\"provider\": ..., \"id\": ...}]}" "missing_param" 400)
+
+      (> (count items) 100)
+      (error-response "Maximum 100 items per batch request" "batch_limit_exceeded" 400)
+
+      :else
+      (let [parsed-items (mapv (fn [item]
+                                {:provider (get item "provider")
+                                 :id       (get item "id")})
+                              items)
+            result       (query/batch-resolve db parsed-items)
+            api-results  (mapv entity->api-map (:results result))]
+        (json-response {:results   api-results
+                        :count     (count api-results)
+                        :not_found (:not_found result)})))))
+
 ;; ---------------------------------------------------------------------------
 ;; Middleware
 ;; ---------------------------------------------------------------------------
@@ -151,6 +208,29 @@
         (log/error e "Unhandled exception in API handler")
         (error-response "Internal server error" "internal_error" 500)))))
 
+(defn wrap-content-negotiation
+  "Middleware: read the Accept header, serve application/edn (via pr-str)
+   when requested. Otherwise return JSON as today.
+   If the response body is already a string (from json-response), and the
+   client wants EDN, re-parse the JSON and pr-str it. This is not ideal
+   but avoids changing every handler's return contract."
+  [handler]
+  (fn [request]
+    (let [response (handler request)
+          accept   (get-in request [:headers "accept"] "")]
+      (if (and (str/includes? accept "application/edn")
+               (= "application/json"
+                  (get-in response [:headers "Content-Type"])))
+        (try
+          (let [body-str (:body response)
+                data     (json/parse-string body-str true)]
+            (assoc response
+                   :headers (assoc (:headers response)
+                                   "Content-Type" "application/edn")
+                   :body (pr-str data)))
+          (catch Exception _
+            response))
+        response))))
 
 
 ;; ---------------------------------------------------------------------------
@@ -171,11 +251,16 @@
            ["/search"  {:get (fn [req] (handle-search req db))}]
            ["/resolve" {:get (fn [req] (handle-resolve req db))}]
            ["/lookup"  {:get (fn [req] (handle-lookup req db))}]
-           ["/stats"   {:get (fn [req] (handle-stats req db))}]])
+           ["/stats"   {:get (fn [req] (handle-stats req db))}]
+           ["/batch/lookup"  {:post (fn [req] (handle-batch-lookup req db))}]
+           ["/batch/resolve" {:post (fn [req] (handle-batch-resolve req db))}]
+           ["/schema/person" {:get (fn [_req] (json-response (export/person-json-schema)))}]
+           ["/schema/team"   {:get (fn [_req] (json-response (export/team-json-schema)))}]])
          (ring/create-default-handler
           {:not-found (fn [_] (error-response "Not found" "not_found" 404))}))]
     (-> handler
         wrap-params
+        wrap-content-negotiation
         wrap-exceptions)))
 
 ;; ---------------------------------------------------------------------------
