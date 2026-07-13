@@ -44,6 +44,8 @@ The CSV data files are included in `data/`:
 - `data/people.csv` — 429,785 players and coaches
 - `data/teams.csv` — 45,349 clubs
 - `data/names.csv` — Aliases/alternate names
+- `data/competitions.csv` — Competitions mapping
+- `data/seasons.csv` — Seasons mapping
 - `data/meta.json` — Build metadata
 
 ## CLI Usage
