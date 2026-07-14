@@ -1,3 +1,6 @@
+# Thorold CI — tests + SLF4J verification
+# Native image builds are intentionally not run in CI — see scripts/build-native.sh for local builds.
+
 name: CI
 
 on:
@@ -8,17 +11,20 @@ on:
 
 jobs:
   test:
-    name: Run tests
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ '11', '17', '21' ]
+    name: Test with Java ${{ matrix.java }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: ${{ matrix.java }}
           distribution: 'temurin'
 
       - name: Install Clojure CLI
@@ -33,9 +39,9 @@ jobs:
             ~/.m2/repository
             ~/.gitlibs
             ~/.deps.clj
-          key: ${{ runner.os }}-deps-${{ hashFiles('deps.edn') }}
+          key: ${{ runner.os }}-clojure-${{ matrix.java }}-${{ hashFiles('deps.edn') }}
           restore-keys: |
-            ${{ runner.os }}-deps-
+            ${{ runner.os }}-clojure-${{ matrix.java }}-
 
       - name: Run tests
         run: clojure -M:test

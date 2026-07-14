@@ -21,6 +21,11 @@ The following are in scope for security reports:
 
 - **Data integrity:** Corrupted or incorrect ID mappings
 - **API vulnerabilities:** Injection, authentication bypass, rate limit circumvention
+- **Batch request limits:** `/batch/lookup` and `/batch/resolve` enforce a 100-item
+  server-side cap, returning HTTP 400 before any query logic runs if exceeded
+- **EDN content negotiation:** `wrap-content-negotiation` is output-only — it serializes
+  responses via `pr-str` and never calls `read-string`, `eval`, `load-string`, or
+  `load-file` on request input
 - **Credential exposure:** API keys, tokens, or PII in committed files
 - **Dependency vulnerabilities:** Known CVEs in project dependencies
 

@@ -7,7 +7,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
----
+### Infrastructure
+- Consolidated `.github/workflows/ci.yml` and `test.yml` into a single workflow —
+  tests previously ran 2–3× per push due to overlapping triggers
+- Aligned Clojure CLI version to `1.12.4.1602` across the matrix (was `1.11.1.1413` in `test.yml`)
+- Added Java 11/17/21 matrix to CI (previously only Java 17 in `ci.yml`)
+- Documented that native image builds are intentionally local-only (CI comment + README note)
+- Updated `SECURITY.md` scope with batch endpoint 100-item cap and EDN output-only safety note
+
+### Known Gaps
+- CI does not run `clj-kondo` linting — neither workflow has ever included it
 
 ## [1.2.0] — 2026-07-13
 

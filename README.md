@@ -227,7 +227,7 @@ On typical hardware, fuzzy name searches resolve in `<2µs`, while direct ID loo
 
 ## Building a Native Binary
 
-Thorold can be compiled into a standalone, self-contained native executable using GraalVM. This eliminates JVM startup overhead and provides a zero-dependency binary suitable for CLI tools and serverless environments.
+Thorold can be compiled into a standalone, self-contained native executable using GraalVM. This eliminates JVM startup overhead and provides a zero-dependency binary suitable for CLI tools and serverless environments. This is a local-only build process — CI runs on a standard JDK without GraalVM installed.
 
 ### Requirements
 - **GraalVM 21+** (Java 21)
