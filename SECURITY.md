@@ -6,7 +6,7 @@ If you discover a security vulnerability in Thorold or its data, please report i
 responsibly:
 
 1. **Do NOT open a public issue** for security vulnerabilities
-2. Email: [getintouch@withqwerty.com](mailto:dennisgathu8@gmail.com)
+2. Email: (mailto: dennisgathu8@gmail.com)
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce
